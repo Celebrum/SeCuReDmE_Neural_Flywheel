@@ -159,3 +159,7 @@ unstructured==0.8.1
 ai21==1.2.6
 typing-extensions==4.5.0
 llama_cpp_python==0.2.7
+
+# Model Providers
+mindsdb-sdk>=1.1.0
+tensorzero-sdk>=1.0.0  # Replace with actual package name when available

@@ -5,6 +5,8 @@ from superagi.models.organisation import Organisation
 from superagi.models.project import Project
 from superagi.models.models import Models
 from superagi.llms.openai import OpenAi
+from superagi.llms.tensor_zero import TensorZero
+from superagi.llms.mindsdb import MindsDB
 from superagi.helper.encyption_helper import encrypt_data, decrypt_data
 from fastapi import HTTPException
 import logging
@@ -85,6 +87,10 @@ class ModelsConfig(DBBaseModel):
             session.flush()
             if model_provider == 'OpenAI':
                 cls.storeGptModels(session, organisation_id, existing_entry.id, model_api_key)
+            elif model_provider == 'TensorZero':
+                cls.storeTensorZeroModels(session, organisation_id, existing_entry.id, model_api_key)
+            elif model_provider == 'MindsDB':
+                cls.storeMindsDBModels(session, organisation_id, existing_entry.id, model_api_key)
             result = {'message': 'The API key was successfully updated'}
         else:
             new_entry = ModelsConfig(org_id=organisation_id, provider=model_provider,
@@ -94,6 +100,10 @@ class ModelsConfig(DBBaseModel):
             session.flush()
             if model_provider == 'OpenAI':
                 cls.storeGptModels(session, organisation_id, new_entry.id, model_api_key)
+            elif model_provider == 'TensorZero':
+                cls.storeTensorZeroModels(session, organisation_id, new_entry.id, model_api_key)
+            elif model_provider == 'MindsDB':
+                cls.storeMindsDBModels(session, organisation_id, new_entry.id, model_api_key)
             result = {'message': 'The API key was successfully stored', 'model_provider_id': new_entry.id}
 
         return result
@@ -102,6 +112,34 @@ class ModelsConfig(DBBaseModel):
     def storeGptModels(cls, session, organisation_id, model_provider_id, model_api_key):
         default_models = {"gpt-3.5-turbo": 4032, "gpt-4": 8092, "gpt-3.5-turbo-16k": 16184}
         models = OpenAi(api_key=model_api_key).get_models()
+        installed_models = [model[0] for model in session.query(Models.model_name).filter(Models.org_id == organisation_id).all()]
+        for model in models:
+            if model not in installed_models and model in default_models:
+                result = Models.store_model_details(session, organisation_id, model, model, '',
+                                                 model_provider_id, default_models[model], 'Custom', '', 0)
+
+    @classmethod
+    def storeTensorZeroModels(cls, session, organisation_id, model_provider_id, model_api_key):
+        default_models = {
+            "tensor-zero-general": 8192,
+            "tensor-zero-code": 16384,
+            "tensor-zero-chat": 4096
+        }
+        models = TensorZero(api_key=model_api_key).get_models()
+        installed_models = [model[0] for model in session.query(Models.model_name).filter(Models.org_id == organisation_id).all()]
+        for model in models:
+            if model not in installed_models and model in default_models:
+                result = Models.store_model_details(session, organisation_id, model, model, '',
+                                                 model_provider_id, default_models[model], 'Custom', '', 0)
+
+    @classmethod
+    def storeMindsDBModels(cls, session, organisation_id, model_provider_id, model_api_key):
+        default_models = {
+            "mindsdb-gpt4": 8192,
+            "mindsdb-claude": 16384,
+            "mindsdb-codellama": 4096
+        }
+        models = MindsDB(api_key=model_api_key).get_models()
         installed_models = [model[0] for model in session.query(Models.model_name).filter(Models.org_id == organisation_id).all()]
         for model in models:
             if model not in installed_models and model in default_models:
